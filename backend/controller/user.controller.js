@@ -1,71 +1,63 @@
 const userModel = require('../models/user.model');
-const userService = require ('../services/user.service');
+const userService = require('../services/user.service');
 const { validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs')
 const blackListTokenModel = require('../models/blacklistToken.model');
 
 module.exports.registerUser = async (req, res, next) => {
 
-const errors = validationResult(req);
- if(!errors.isEmpty()){
-    return res.status(400).json({errors:errors.array()});
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
-  const { fullname, email, password } = req.body;
+  const { fullname, email, password } = req.body; 
 
-  const hashedPassword = await userModel.hashPassword(password);
+  let salt = await bcrypt.genSalt(10)
+  const hashedPassword = await bcrypt.hash(password, salt);
+  
   const user = await userService.createUser({
-        firstname: fullname.firstname,
-        lastname: fullname.lastname,
-        email,
-        password: hashedPassword
-    });
+    firstname: fullname.firstname,
+    lastname: fullname.lastname,
+    email,
+    password: hashedPassword
+  });
 
-    const token = user.generateAuthToken();
+  // const token = user.generateAuthToken();
 
-    res.status(201).json({ token, user });
-
+  res.status(201).json({  user });
 }
 
 module.exports.loginUser = async (req, res, next) => {
-    console.log('Login request received:', req.body);
-
-
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-  }
-
   const { email, password } = req.body;
 
-  const user = await userModel.findOne({ email }).select('+password');
-
+  const user = await userModel.findOne({ email });
   if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+    return errorResponse(res, 'Invalid credentials', 400);
   }
-
-  const isMatch = await user.comparePassword(password);
-
+console.log(user)
+  const isMatch = await bcrypt.compare(password, user.password);
+  console.log(isMatch , user)
   if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+    return errorResponse(res, 'Invalid credentials', 400);
   }
+  // const payload = { user: { id: user._id } };
+  // const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
 
-  const token = user.generateAuthToken();
+  return res.status(200).json({success: true, msg:'login success',});
 
-  res.cookie('token', token);
-
-  res.status(200).json({ token, user });
 }
 
 module.exports.getUserProfile = async (req, res, next) => {
-res.status(200).json(req.user);
+  res.status(200).json(req.user);
 
 }
 
 module.exports.logoutUser = async (req, res, next) => {
-    res.clearCookie('token');
-    const token = req.cookies.token || req.headers.authorization.split(' ')[ 1 ];
+  res.clearCookie('token');
+  const token = req.cookies.token || req.headers.authorization.split(' ')[1];
 
-    await blackListTokenModel.create({ token });
+  await blackListTokenModel.create({ token });
 
-    res.status(200).json({ message: 'Logged out' });
+  res.status(200).json({ message: 'Logged out' });
 
 }

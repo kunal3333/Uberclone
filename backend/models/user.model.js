@@ -1,9 +1,4 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-
-// Make sure dotenv is loaded
-require('dotenv').config();
 
 const userSchema = new mongoose.Schema({
     fullname: {
@@ -26,46 +21,12 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true,
-        select: false,  // Don't include password by default in queries
+        required: true
     },
     socketId: {
         type: String,
     },
 });
 
-// Hash password before saving if it's modified
-userSchema.pre('save', async function(next) {
-    if (this.isModified('password')) {  // Only hash if password is modified
-        this.password = await bcrypt.hash(this.password, 10);
-    }
-    next();
-});
-
-// JWT generation method
-userSchema.methods.generateAuthToken = async function () {
-    try {
-        const token = jwt.sign({ _id: this._id }, process.env.JWT_SECRET, { expiresIn: '24h' });
-        return token;
-    } catch (error) {
-        throw new Error('Error generating token');
-    }
-};
-
-// Compare password method
-userSchema.methods.comparePassword = async function (password) {
-    try {
-        return await bcrypt.compare(password, this.password);
-    } catch (error) {
-        throw new Error('Error comparing password');
-    }
-};
-
-// Static method for password hashing
-userSchema.statics.hashPassword = async function (password) {
-    return await bcrypt.hash(password, 10);
-};
-
-const userModel = mongoose.model('user', userSchema);
-
-module.exports = userModel;
+let userModel = mongoose.model('users', userSchema);
+module.exports =userModel;
