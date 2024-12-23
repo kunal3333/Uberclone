@@ -41,13 +41,24 @@ module.exports.loginUser = async (req, res, next) => {
   }
 
     // If login is successful, generate a JWT token
-    const token = jwt.sign({ _id: user._id, email: user.email }, // Payload with user data
-      process.env.JWT_SECRET,               // Secret key to sign the token
-      { expiresIn: '24h' }                 // Set token expiry time (24 hours)
+    const token = jwt.sign({ _id: user._id, email: user.email }, 
+      process.env.JWT_SECRET,              
+      { expiresIn: '24h' }               
     );
   
     // Send the token back to the client (you could also send it in a cookie or header)
-    res.status(200).json({success: true,msg: 'Login successful',token: token, // Include the token in the response
+    res.status(200).json({
+      success: true,
+      msg: 'Login successful',
+      token: token,                          
+      user: {                                
+        _id: user._id,
+        email: user.email,
+        fullname: {                          
+          firstname: user.fullname.firstname,
+          lastname: user.fullname.lastname
+        },
+      }
     });
   }
 
